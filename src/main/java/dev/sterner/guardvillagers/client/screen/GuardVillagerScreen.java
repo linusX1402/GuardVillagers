@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.gui.widget.TexturedButtonWidget;
+import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
@@ -70,7 +70,21 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
         int i = (this.width - this.backgroundWidth) / 2;
         int j = (this.height - this.backgroundHeight) / 2;
         ctx.drawTexture(GUARD_GUI_TEXTURES, i, j, 0, 0, this.backgroundWidth, this.backgroundHeight);
-        InventoryScreen.drawEntity(ctx, i + 51, j + 75, 30, (float) (i + 51) - this.mousePosX, (float) (j + 75 - 50) - this.mousePosY, this.guardEntity);
+        
+        // Define the rendering area for the entity
+        int entityX = i + 51;
+        int entityY = j + 75;
+        int entityAreaWidth = 60;  // Width of the rendering area
+        int entityAreaHeight = 80; // Height of the rendering area
+        
+        InventoryScreen.drawEntity(ctx, 
+            entityX - entityAreaWidth / 2, entityY - entityAreaHeight, // x1, y1 = top-left
+            entityX + entityAreaWidth / 2, entityY, // x2, y2 = bottom-right
+            30, // size
+            0.0F, // f = vertical offset
+            (float) entityX - this.mousePosX,
+            (float) (entityY - 50) - this.mousePosY,
+            this.guardEntity);
     }
 
     @Override
@@ -108,7 +122,7 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(ctx);
+        this.renderBackground(ctx, mouseX, mouseY, partialTicks);
         this.mousePosX = (float) mouseX;
         this.mousePosY = (float) mouseY;
         super.render(ctx, mouseX, mouseY, partialTicks);
@@ -116,16 +130,26 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
     }
 
 
-    class GuardGuiButton extends TexturedButtonWidget {
+    class GuardGuiButton extends ButtonWidget {
         private final Identifier texture;
         private final Identifier newTexture;
         private final boolean isFollowButton;
+        private final int u;
+        private final int v;
+        private final int hoveredVOffset;
+        private final int textureWidth;
+        private final int textureHeight;
 
         public GuardGuiButton(int xIn, int yIn, int widthIn, int heightIn, int xTexStartIn, int yTexStartIn, int yDiffTextIn, Identifier resourceLocationIn, Identifier newTexture, boolean isFollowButton, PressAction pressAction) {
-            super(xIn, yIn, widthIn, heightIn, xTexStartIn, yTexStartIn, yDiffTextIn, resourceLocationIn, pressAction);
+            super(xIn, yIn, widthIn, heightIn, Text.empty(), pressAction, DEFAULT_NARRATION_SUPPLIER);
             this.texture = resourceLocationIn;
             this.newTexture = newTexture;
             this.isFollowButton = isFollowButton;
+            this.u = xTexStartIn;
+            this.v = yTexStartIn;
+            this.hoveredVOffset = yDiffTextIn;
+            this.textureWidth = 256;
+            this.textureHeight = 256;
         }
 
         public boolean requirementsForTexture() {
@@ -137,13 +161,13 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
         @Override
         public void renderButton(DrawContext ctx, int mouseX, int mouseY, float partialTicks) {
             Identifier icon = this.requirementsForTexture() ? texture : newTexture;
-            int i = this.v;
+            int vOffset = this.v;
             if (this.isHovered()) {
-                i += this.hoveredVOffset;
+                vOffset += this.hoveredVOffset;
             }
 
             RenderSystem.enableDepthTest();
-            ctx.drawTexture(icon, this.getX(), this.getY(), (float) v, (float) i, this.width, this.height, textureWidth, textureHeight);
+            ctx.drawTexture(icon, this.getX(), this.getY(), this.u, vOffset, this.width, this.height, this.textureWidth, this.textureHeight);
         }
     }
 

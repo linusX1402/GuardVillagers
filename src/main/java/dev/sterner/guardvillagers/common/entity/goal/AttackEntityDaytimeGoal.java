@@ -17,7 +17,7 @@ public class AttackEntityDaytimeGoal<T extends LivingEntity> extends ActiveTarge
     }
 
     public float getBrightnessAtEyes() {
-        return this.mob.getWorld().isPosLoaded(this.mob.getBlockX(), this.mob.getBlockZ())
+        return this.mob.getWorld().isChunkLoaded(this.mob.getChunkPos().x, this.mob.getChunkPos().z)
                 ? this.mob.getWorld().getBrightness(BlockPos.ofFloored(this.mob.getX(), this.mob.getEyeY(), this.mob.getZ()))
                 : 0.0F;
     }

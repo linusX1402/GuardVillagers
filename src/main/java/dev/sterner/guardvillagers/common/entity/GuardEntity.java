@@ -501,7 +501,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         if (itemstack.getItem() == Items.SHIELD) { // See above
 
             EntityAttributeInstance modifiableattributeinstance = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
-            modifiableattributeinstance.removeModifier(USE_ITEM_SPEED_PENALTY);
+            modifiableattributeinstance.removeModifier(USE_ITEM_SPEED_PENALTY.getId());
             modifiableattributeinstance.addTemporaryModifier(USE_ITEM_SPEED_PENALTY);
         }
     }
@@ -510,7 +510,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     public void stopUsingItem() {
         super.stopUsingItem();
         if (this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).hasModifier(USE_ITEM_SPEED_PENALTY))
-            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).removeModifier(USE_ITEM_SPEED_PENALTY);
+            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).removeModifier(USE_ITEM_SPEED_PENALTY.getId());
     }
 
     public void disableShield(boolean increase) {
@@ -621,8 +621,9 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         return false;
     }
 
+
     @Override
-    public void attack(LivingEntity target, float pullProgress) {
+    public void shootAt(LivingEntity target, float pullProgress) {
         this.shieldCoolDown = 8;
         if (this.getMainHandStack().getItem() instanceof CrossbowItem)
             this.shoot(this, 6.0F);
@@ -721,10 +722,12 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         }
     }
 
-    @Override
-    public double getHeightOffset() {
-        return -0.35D;
-    }
+
+//    TODO: unknown override
+//    @Override
+//    public double getHeightOffset() {
+//        return -0.35D;
+//    }
 
 
     @Override
@@ -1015,20 +1018,15 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
             }
         }
 
-        @Override
-        protected double getSquaredMaxAttackDistance(LivingEntity attackTarget) {
-            return super.getSquaredMaxAttackDistance(attackTarget) * 3.55D;
-        }
 
         @Override
-        protected void attack(LivingEntity enemy, double distToEnemySqr) {
-            double d0 = this.getSquaredMaxAttackDistance(enemy);
-            if (distToEnemySqr <= d0 && this.getCooldown() <= 0) {
+        public void attack(LivingEntity target) {
+            if (this.canAttack(target)) {
                 this.resetCooldown();
                 this.guard.stopUsingItem();
                 if (guard.shieldCoolDown == 0) this.guard.shieldCoolDown = 8;
                 this.guard.swingHand(Hand.MAIN_HAND);
-                this.guard.tryAttack(enemy);
+                this.guard.tryAttack(target);
             }
         }
     }
