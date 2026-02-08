@@ -158,8 +158,11 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
             return this.isFollowButton ? following : patrol;
         }
 
+
+
+
         @Override
-        public void renderButton(DrawContext ctx, int mouseX, int mouseY, float partialTicks) {
+        public void renderWidget(DrawContext ctx, int mouseX, int mouseY, float partialTicks) {
             Identifier icon = this.requirementsForTexture() ? texture : newTexture;
             int vOffset = this.v;
             if (this.isHovered()) {
