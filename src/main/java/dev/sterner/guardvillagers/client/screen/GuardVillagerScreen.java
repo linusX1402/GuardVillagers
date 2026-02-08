@@ -93,30 +93,66 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
         int health = MathHelper.ceil(guardEntity.getHealth());
         int armor = guardEntity.getArmor();
         int statusU = guardEntity.hasStatusEffect(StatusEffects.POISON) ? 4 : 0;
-        //Health
+
+
+        // Use the proper sprite identifiers for hearts and armor
+        Identifier heartContainer = new Identifier("hud/heart/container");
+        Identifier heartFull = new Identifier("hud/heart/full");
+        Identifier heartHalf = new Identifier("hud/heart/half");
+        Identifier armorEmpty = new Identifier("hud/armor_empty");
+        Identifier armorFull = new Identifier("hud/armor_full");
+        Identifier armorHalf = new Identifier("hud/armor_half");
+
+        // Render hearts
         for (int i = 0; i < 10; i++) {
-            ctx.drawTexture(ICONS, (i * 8) + 80, 20, 16, 0, 9, 9);
+            ctx.drawGuiTexture(heartContainer, (i * 8) + 80, 20, 9, 9);
         }
         for (int i = 0; i < health / 2; i++) {
-            if (health % 2 != 0 && health / 2 == i + 1) {
-                ctx.drawTexture(ICONS, (i * 8) + 80, 20, 16 + 9 * (4 + statusU), 0, 9, 9);
-                ctx.drawTexture(ICONS, ((i + 1) * 8) + 80, 20, 16 + 9 * (5 + statusU), 0, 9, 9);
+            if (health % 2 != 0 && health / 2 == i) {
+                ctx.drawGuiTexture(heartHalf, (i * 8) + 80, 20, 9, 9);
             } else {
-                ctx.drawTexture(ICONS, (i * 8) + 80, 20, 16 + 9 * (4 + statusU), 0, 9, 9);
+                ctx.drawGuiTexture(heartFull, (i * 8) + 80, 20, 9, 9);
             }
         }
-        //Armor
+
+        // Render armor
         for (int i = 0; i < 10; i++) {
-            ctx.drawTexture(ICONS, (i * 8) + 80, 30, 16, 9, 9, 9);
+            ctx.drawGuiTexture(armorEmpty, (i * 8) + 80, 30, 9, 9);
         }
         for (int i = 0; i < armor / 2; i++) {
-            if (armor % 2 != 0 && armor / 2 == i + 1) {
-                ctx.drawTexture(ICONS, (i * 8) + 80, 30, 16 + 9 * 2, 9, 9, 9);
-                ctx.drawTexture(ICONS, ((i + 1) * 8) + 80, 30, 16 + 9, 9, 9, 9);
+            if (armor % 2 != 0 && armor / 2 == i) {
+                ctx.drawGuiTexture(armorHalf, (i * 8) + 80, 30, 9, 9);
             } else {
-                ctx.drawTexture(ICONS, (i * 8) + 80, 30, 16 + 9 * 2, 9, 9, 9);
+                ctx.drawGuiTexture(armorFull, (i * 8) + 80, 30, 9, 9);
             }
         }
+
+
+
+//        //Health
+//        for (int i = 0; i < 10; i++) {
+//            ctx.drawTexture(ICONS, (i * 8) + 80, 20, 16, 0, 9, 9);
+//        }
+//        for (int i = 0; i < health / 2; i++) {
+//            if (health % 2 != 0 && health / 2 == i + 1) {
+//                ctx.drawTexture(ICONS, (i * 8) + 80, 20, 16 + 9 * (4 + statusU), 0, 9, 9);
+//                ctx.drawTexture(ICONS, ((i + 1) * 8) + 80, 20, 16 + 9 * (5 + statusU), 0, 9, 9);
+//            } else {
+//                ctx.drawTexture(ICONS, (i * 8) + 80, 20, 16 + 9 * (4 + statusU), 0, 9, 9);
+//            }
+//        }
+//        //Armor
+//        for (int i = 0; i < 10; i++) {
+//            ctx.drawTexture(ICONS, (i * 8) + 80, 30, 16, 9, 9, 9);
+//        }
+//        for (int i = 0; i < armor / 2; i++) {
+//            if (armor % 2 != 0 && armor / 2 == i + 1) {
+//                ctx.drawTexture(ICONS, (i * 8) + 80, 30, 16 + 9 * 2, 9, 9, 9);
+//                ctx.drawTexture(ICONS, ((i + 1) * 8) + 80, 30, 16 + 9, 9, 9, 9);
+//            } else {
+//                ctx.drawTexture(ICONS, (i * 8) + 80, 30, 16 + 9 * 2, 9, 9, 9);
+//            }
+//        }
 
     }
 
