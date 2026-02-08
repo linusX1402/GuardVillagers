@@ -3,6 +3,7 @@ package dev.sterner.guardvillagers.common.entity.goal;
 import dev.sterner.guardvillagers.GuardVillagers;
 import dev.sterner.guardvillagers.GuardVillagersConfig;
 import dev.sterner.guardvillagers.common.entity.GuardEntity;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.RangedAttackMob;
@@ -153,7 +154,7 @@ public class RangedCrossbowAttackPassiveGoal<T extends PathAwareEntity & RangedA
             } else if (this.crossbowState == CrossbowState.READY_TO_ATTACK && canSee) {
                 this.mob.shootAt(livingentity, 1.0F);
                 ItemStack itemstack1 = this.mob.getStackInHand(GuardVillagers.getHandWith(this.mob, item -> item instanceof CrossbowItem));
-                CrossbowItem.setCharged(itemstack1, false);
+                itemstack1.remove(DataComponentTypes.CHARGED_PROJECTILES);
                 this.crossbowState = CrossbowState.UNCHARGED;
             }
         }
