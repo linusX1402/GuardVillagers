@@ -18,15 +18,19 @@ import net.minecraft.entity.*;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.mob.*;
-import net.minecraft.entity.passive.*;
+import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.*;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -44,29 +48,29 @@ import java.util.function.Predicate;
 public class GuardVillagers implements ModInitializer {
     public static final String MODID = "guardvillagers";
 
-    public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER = new ExtendedScreenHandlerType<>(
-        (syncId, inventory, data) -> {
-            Entity entity = inventory.player.getWorld().getEntityById(data);
-            if (entity instanceof GuardEntity guard) {
-                return new GuardVillagerScreenHandler(syncId, inventory, guard.guardInventory, guard);
-            }
-            return null;
-        },
-        net.minecraft.network.codec.PacketCodecs.VAR_INT
-    );
+    public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER = new ExtendedScreenHandlerType<>(GuardVillagerScreenHandler::new);
 
-    public static final EntityType<GuardEntity> GUARD_VILLAGER = Registry.register(Registries.ENTITY_TYPE, new Identifier(GuardVillagers.MODID, "guard"),
-            FabricEntityTypeBuilder.create(SpawnGroup.CREATURE, GuardEntity::new).dimensions(EntityDimensions.fixed(0.6f, 1.8f)).build());
+
+    public static final EntityType<GuardEntity> GUARD_VILLAGER =
+            Registry.register(Registries.ENTITY_TYPE, new Identifier(GuardVillagers.MODID, "guard"),
+                    FabricEntityTypeBuilder.create(SpawnGroup.CREATURE, GuardEntity::new)
+                            .dimensions(EntityDimensions.fixed(0.6f, 1.8f)).build());
 
     public static final Item GUARD_SPAWN_EGG = new SpawnEggItem(GUARD_VILLAGER, 5651507, 8412749, new Item.Settings());
+    public static SoundEvent GUARD_AMBIENT = SoundEvent.of(new Identifier(MODID, "entity.guard.ambient"));
+    public static SoundEvent GUARD_HURT = SoundEvent.of(new Identifier(MODID, "entity.guard.hurt"));
+    public static SoundEvent GUARD_DEATH = SoundEvent.of(new Identifier(MODID, "entity.guard.death"));
 
     public static Hand getHandWith(LivingEntity livingEntity, Predicate<Item> itemPredicate) {
         return itemPredicate.test(livingEntity.getMainHandStack().getItem()) ? Hand.MAIN_HAND : Hand.OFF_HAND;
     }
 
-    public static SoundEvent GUARD_AMBIENT = SoundEvent.of(new Identifier(MODID, "entity.guard.ambient"));
-    public static SoundEvent GUARD_HURT = SoundEvent.of(new Identifier(MODID, "entity.guard.hurt"));
-    public static SoundEvent GUARD_DEATH = SoundEvent.of(new Identifier(MODID, "entity.guard.death"));
+    public static boolean hotvChecker(PlayerEntity player, GuardEntity guard) {
+        return player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && GuardVillagersConfig.giveGuardStuffHotv ||
+                !GuardVillagersConfig.giveGuardStuffHotv ||
+                guard.getPlayerEntityReputation(player) > GuardVillagersConfig.reputationRequirement &&
+                        !player.getWorld().isClient();
+    }
 
     @Override
     public void onInitialize() {
@@ -93,38 +97,45 @@ public class GuardVillagers implements ModInitializer {
 
     private boolean onDamage(LivingEntity entity, DamageSource source, float amount) {
         Entity attacker = source.getAttacker();
-        if (entity == null || attacker == null)
-            return true;
+        if (entity == null || attacker == null) return true;
         boolean shouldDamage = true;
-        boolean isVillager = entity.getType() == EntityType.VILLAGER || entity.getType() == GuardVillagers.GUARD_VILLAGER;
+        boolean isVillager =
+                entity.getType() == EntityType.VILLAGER || entity.getType() == GuardVillagers.GUARD_VILLAGER;
         boolean isGolem = isVillager || entity.getType() == EntityType.IRON_GOLEM;
-        if (isGolem && attacker.getType() == GuardVillagers.GUARD_VILLAGER && !GuardVillagersConfig.guardArrowsHurtVillagers) {
+        if (isGolem && attacker.getType() == GuardVillagers.GUARD_VILLAGER &&
+                !GuardVillagersConfig.guardArrowsHurtVillagers) {
             shouldDamage = false;
         }
         if (isVillager && attacker instanceof MobEntity) {
-            List<MobEntity> list = attacker.getWorld().getNonSpectatingEntities(MobEntity.class, attacker.getBoundingBox().expand(GuardVillagersConfig.guardVillagerHelpRange, 5.0D, GuardVillagersConfig.guardVillagerHelpRange));
+            List<MobEntity> list = attacker.getWorld().getNonSpectatingEntities(MobEntity.class,
+                    attacker.getBoundingBox().expand(GuardVillagersConfig.guardVillagerHelpRange, 5.0D,
+                            GuardVillagersConfig.guardVillagerHelpRange));
             for (MobEntity mob : list) {
                 boolean type = mob.getType() == GUARD_VILLAGER || mob.getType() == EntityType.IRON_GOLEM;
-                boolean trueSourceGolem = attacker.getType() == GUARD_VILLAGER || attacker.getType() == EntityType.IRON_GOLEM;
-                if (!trueSourceGolem && type && mob.getTarget() == null)
-                    mob.setTarget((MobEntity) attacker);
+                boolean trueSourceGolem =
+                        attacker.getType() == GUARD_VILLAGER || attacker.getType() == EntityType.IRON_GOLEM;
+                if (!trueSourceGolem && type && mob.getTarget() == null) mob.setTarget((MobEntity) attacker);
             }
         }
         return shouldDamage;
     }
 
-    private ActionResult villagerConvert(PlayerEntity player, World world, Hand hand, Entity entity, @Nullable EntityHitResult entityHitResult) {
+    private ActionResult villagerConvert(PlayerEntity player, World world, Hand hand, Entity entity,
+                                         @Nullable EntityHitResult entityHitResult) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if ((itemStack.getItem() instanceof SwordItem || itemStack.getItem() instanceof CrossbowItem) && player.isSneaking()) {
+        if ((itemStack.getItem() instanceof SwordItem || itemStack.getItem() instanceof CrossbowItem) &&
+                player.isSneaking()) {
             if (entityHitResult != null) {
                 Entity target = entityHitResult.getEntity();
                 if (target instanceof VillagerEntity villagerEntity) {
                     if (!villagerEntity.isBaby()) {
-                        if (villagerEntity.getVillagerData().getProfession() == VillagerProfession.NONE || villagerEntity.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
-                            if (!GuardVillagersConfig.convertVillagerIfHaveHotv || player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && GuardVillagersConfig.convertVillagerIfHaveHotv) {
+                        if (villagerEntity.getVillagerData().getProfession() == VillagerProfession.NONE ||
+                                villagerEntity.getVillagerData().getProfession() == VillagerProfession.NITWIT) {
+                            if (!GuardVillagersConfig.convertVillagerIfHaveHotv ||
+                                    player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) &&
+                                            GuardVillagersConfig.convertVillagerIfHaveHotv) {
                                 convertVillager(villagerEntity, player, world);
-                                if (!player.getAbilities().creativeMode)
-                                    itemStack.decrement(1);
+                                if (!player.getAbilities().creativeMode) itemStack.decrement(1);
                                 return ActionResult.SUCCESS;
                             }
                         }
@@ -141,21 +152,26 @@ public class GuardVillagers implements ModInitializer {
         player.swingHand(Hand.MAIN_HAND);
         ItemStack itemstack = player.getEquippedStack(EquipmentSlot.MAINHAND);
         GuardEntity guard = GUARD_VILLAGER.create(world);
-        if (guard == null)
-            return;
+        if (guard == null) return;
         if (player.getWorld().isClient()) {
             ParticleEffect particleEffect = ParticleTypes.HAPPY_VILLAGER;
             for (int i = 0; i < 10; ++i) {
                 double d0 = villagerEntity.getRandom().nextGaussian() * 0.02D;
                 double d1 = villagerEntity.getRandom().nextGaussian() * 0.02D;
                 double d2 = villagerEntity.getRandom().nextGaussian() * 0.02D;
-                villagerEntity.getWorld().addParticle(particleEffect, villagerEntity.getX() + (double) (villagerEntity.getRandom().nextFloat() * villagerEntity.getWidth() * 2.0F) - (double) villagerEntity.getWidth(), villagerEntity.getY() + 0.5D + (double) (villagerEntity.getRandom().nextFloat() * villagerEntity.getWidth()),
-                        villagerEntity.getZ() + (double) (villagerEntity.getRandom().nextFloat() * villagerEntity.getWidth() * 2.0F) - (double) villagerEntity.getWidth(), d0, d1, d2);
+                villagerEntity.getWorld().addParticle(particleEffect, villagerEntity.getX() +
+                                (double) (villagerEntity.getRandom().nextFloat() * villagerEntity.getWidth() * 2.0F) -
+                                (double) villagerEntity.getWidth(), villagerEntity.getY() + 0.5D +
+                                (double) (villagerEntity.getRandom().nextFloat() * villagerEntity.getWidth()),
+                        villagerEntity.getZ() +
+                                (double) (villagerEntity.getRandom().nextFloat() * villagerEntity.getWidth() * 2.0F) -
+                                (double) villagerEntity.getWidth(), d0, d1, d2);
             }
         }
         guard.copyPositionAndRotation(villagerEntity);
         guard.headYaw = villagerEntity.headYaw;
-        guard.refreshPositionAndAngles(villagerEntity.getX(), villagerEntity.getY(), villagerEntity.getZ(), villagerEntity.getYaw(), villagerEntity.getPitch());
+        guard.refreshPositionAndAngles(villagerEntity.getX(), villagerEntity.getY(), villagerEntity.getZ(),
+                villagerEntity.getYaw(), villagerEntity.getPitch());
         guard.playSound(SoundEvents.ENTITY_VILLAGER_YES, 1.0F, 1.0F);
         guard.equipStack(EquipmentSlot.MAINHAND, itemstack.copy());
         guard.guardInventory.setStack(5, itemstack.copy());
@@ -176,10 +192,5 @@ public class GuardVillagers implements ModInitializer {
         villagerEntity.releaseTicketFor(MemoryModuleType.JOB_SITE);
         villagerEntity.releaseTicketFor(MemoryModuleType.MEETING_POINT);
         villagerEntity.discard();
-    }
-
-    public static boolean hotvChecker(PlayerEntity player, GuardEntity guard) {
-        return player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && GuardVillagersConfig.giveGuardStuffHotv
-                || !GuardVillagersConfig.giveGuardStuffHotv || guard.getPlayerEntityReputation(player) > GuardVillagersConfig.reputationRequirement && !player.getWorld().isClient();
     }
 }
