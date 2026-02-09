@@ -57,8 +57,7 @@ public class GuardVillagers implements ModInitializer {
     public static final EntityType<GuardEntity> GUARD_VILLAGER =
             Registry.register(Registries.ENTITY_TYPE, Identifier.of(GuardVillagers.MODID, "guard"),
                     FabricEntityType.Builder.createMob(GuardEntity::new, SpawnGroup.CREATURE, (builder) -> builder)
-                            .dimensions(0.6f, 1.8f).build());    public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER =
-            new ExtendedScreenHandlerType<>(GuardVillagerScreenHandler::new, PacketCodecs.VAR_INT);
+                            .dimensions(0.6f, 1.8f).build());
 
     public static final Item GUARD_SPAWN_EGG = new SpawnEggItem(GUARD_VILLAGER, 5651507, 8412749, new Item.Settings());
     public static SoundEvent GUARD_AMBIENT = SoundEvent.of(Identifier.of(MODID, "entity.guard.ambient"));
