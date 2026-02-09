@@ -53,7 +53,9 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -803,7 +805,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     protected ActionResult interactMob(PlayerEntity player, Hand hand) {
         boolean configValues = player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && GuardVillagersConfig.giveGuardStuffHotv || player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && GuardVillagersConfig.setGuardPatrolHotv || player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && GuardVillagersConfig.giveGuardStuffHotv && GuardVillagersConfig.setGuardPatrolHotv || this.getPlayerEntityReputation(player) >= GuardVillagersConfig.reputationRequirement || player.hasStatusEffect(StatusEffects.HERO_OF_THE_VILLAGE) && !GuardVillagersConfig.giveGuardStuffHotv && !GuardVillagersConfig.setGuardPatrolHotv || this.getOwnerId() != null && this.getOwnerId().equals(player.getUuid());
         boolean inventoryRequirements = !player.shouldCancelInteraction();
-        if (inventoryRequirements) {
+        if (inventoryRequirements && !player.getStackInHand(hand).isOf(GuardVillagers.GUARD_SPAWN_EGG)) {
             if (this.getTarget() != player && this.canMoveVoluntarily() && configValues) {
                 if (player instanceof ServerPlayerEntity) {
                     this.openGui((ServerPlayerEntity) player);
@@ -893,6 +895,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         this.interacting = true;
         if (!this.getWorld().isClient()) {
             player.openHandledScreen(new GuardScreenHandlerFactory());
+//            player.openHandledScreen(new SimpleNamedScreenHandlerFactory((syncId, playerInventory, playerx) -> new GuardVillagerScreenHandler(syncId, playerInventory, this), this.getDisplayName()));
         }
     }
 
@@ -900,27 +903,26 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         this.dataTracker.set(GUARD_VARIANT, i);
     }
 
-private class GuardScreenHandlerFactory implements ExtendedScreenHandlerFactory<PacketByteBuf> {
-    private GuardEntity guard() {
-        return GuardEntity.this;
-    }
+    private class GuardScreenHandlerFactory implements ExtendedScreenHandlerFactory<Integer> {
+        private GuardEntity guard() {
+            return GuardEntity.this;
+        }
 
-    @Override
-    public PacketByteBuf getScreenOpeningData(ServerPlayerEntity player) {
-        return PacketByteBufs.create().writeVarInt(this.guard().getId());
-    }
+        @Override
+        public Integer getScreenOpeningData(ServerPlayerEntity player) {
+            return this.guard().getId();
+        }
 
-    @Override
-    public Text getDisplayName() {
-        return this.guard().getDisplayName();
-    }
+        @Override
+        public Text getDisplayName() {
+            return this.guard().getDisplayName();
+        }
 
-    @Override
-    public ScreenHandler createMenu(int syncId, PlayerInventory inv, PlayerEntity player) {
-        var guardInv = this.guard().guardInventory;
-        return new GuardVillagerScreenHandler(syncId, inv, guardInv, this.guard());
+        @Override
+        public ScreenHandler createMenu(int syncId, PlayerInventory inv, PlayerEntity player) {
+            return new GuardVillagerScreenHandler(syncId, inv, this.guard().guardInventory, this.guard());
+        }
     }
-}
 
     public boolean isEating() {
         return GuardEatFoodGoal.isConsumable(this.getActiveItem()) && this.isUsingItem();

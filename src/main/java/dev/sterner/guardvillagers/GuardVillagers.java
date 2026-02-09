@@ -49,8 +49,7 @@ import java.util.function.Predicate;
 
 public class GuardVillagers implements ModInitializer {
     public static final String MODID = "guardvillagers";
-    public static final Logger LOGGER = LoggerFactory.getLogger(MODID
-    );
+    public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
 
     public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER =
         new ExtendedScreenHandlerType<>(
