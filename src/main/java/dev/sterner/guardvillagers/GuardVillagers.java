@@ -41,14 +41,22 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.village.VillagerProfession;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.function.Predicate;
 
 public class GuardVillagers implements ModInitializer {
     public static final String MODID = "guardvillagers";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MODID
+    );
 
-    public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER = new ExtendedScreenHandlerType<>(GuardVillagerScreenHandler::new);
+    public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER =
+        new ExtendedScreenHandlerType<>(
+            GuardVillagerScreenHandler::new,
+            PacketCodecs.VAR_INT
+        );
 
 
     public static final EntityType<GuardEntity> GUARD_VILLAGER =

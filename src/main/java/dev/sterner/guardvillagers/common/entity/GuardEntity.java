@@ -46,11 +46,13 @@ import net.minecraft.loot.LootTable;
 import net.minecraft.loot.context.LootContextParameterSet;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -234,26 +236,48 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
             int z = nbt.getInt("PatrolPosZ");
             this.dataTracker.set(GUARD_POS, Optional.ofNullable(new BlockPos(x, y, z)));
         }
-        NbtList listtag = nbt.getList("Gossips", 10);
-        this.gossips.deserialize(new Dynamic<>(NbtOps.INSTANCE, listtag));
-        NbtList listnbt = nbt.getList("Inventory", 9);
-        for (int i = 0; i < listnbt.size(); ++i) {
-            NbtCompound nbtnbt = listnbt.getCompound(i);
-            int j = nbtnbt.getByte("Slot") & 255;
-            this.guardInventory.setStack(j, ItemStack.fromNbt(getRegistryManager(), nbtnbt).orElse(ItemStack.EMPTY));
-        }
-        if (nbt.contains("ArmorItems", 9)) {
-            NbtList armorItems = nbt.getList("ArmorItems", 10);
-            for (int i = 0; i < this.armorItems.size(); ++i) {
-                int index = GuardEntity.slotToInventoryIndex(MobEntity.getPreferredEquipmentSlot(ItemStack.fromNbt(getRegistryManager(),armorItems.getCompound(i)).orElse(ItemStack.EMPTY)));
-                this.guardInventory.setStack(index, ItemStack.fromNbt(getRegistryManager(),armorItems.getCompound(i)).orElse(ItemStack.EMPTY));
+        NbtList gossipListTag = nbt.getList("Gossips", 10);
+        this.gossips.deserialize(new Dynamic<>(NbtOps.INSTANCE, gossipListTag));
+        NbtList inventoryNbtList = nbt.getList("Inventory", 10);
+        for (int i = 0; i < inventoryNbtList.size(); ++i) {
+            NbtCompound itemCompound = inventoryNbtList.getCompound(i);
+            int slot = itemCompound.getByte("Slot") & 255;
+            if (slot < this.guardInventory.size()) {
+                NbtCompound itemData = itemCompound.contains("Item", 10)
+                    ? itemCompound.getCompound("Item")
+                    : itemCompound;
+                ItemStack stack = ItemStack.fromNbt(getRegistryManager(), itemData).orElse(ItemStack.EMPTY);
+                if(!stack.isEmpty() && !stack.isOf(Items.AIR)) {
+                    this.guardInventory.setStack(slot, stack);
+                }
             }
         }
-        if (nbt.contains("HandItems", 9)) {
+
+        if (nbt.contains("ArmorItems", NbtElement.LIST_TYPE)) {
+            NbtList armorItems = nbt.getList("ArmorItems", 10);
+            for (int i = 0; i < this.armorItems.size(); ++i) {
+                NbtCompound itemCompound = armorItems.getCompound(i);
+                if (!itemCompound.isEmpty() && itemCompound.contains("id", NbtElement.STRING_TYPE)) {
+                    ItemStack stack = ItemStack.fromNbt(getRegistryManager(), itemCompound).orElse(ItemStack.EMPTY);
+                    if (!stack.isEmpty() && !stack.isOf(Items.AIR)) {
+                        int index = GuardEntity.slotToInventoryIndex(MobEntity.getPreferredEquipmentSlot(stack));
+                        this.guardInventory.setStack(index, stack);
+                    }
+                }
+            }
+        }
+
+        if (nbt.contains("HandItems", NbtElement.LIST_TYPE)) {
             NbtList handItems = nbt.getList("HandItems", 10);
             for (int i = 0; i < this.handItems.size(); ++i) {
-                int handSlot = i == 0 ? 5 : 4;
-                this.guardInventory.setStack(handSlot, ItemStack.fromNbt(getRegistryManager(),handItems.getCompound(i)).orElse(ItemStack.EMPTY));
+                NbtCompound itemCompound = handItems.getCompound(i);
+                if (!itemCompound.isEmpty() && itemCompound.contains("id", NbtElement.STRING_TYPE)) {
+                    int handSlot = i == 0 ? 5 : 4;
+                    ItemStack stack = ItemStack.fromNbt(getRegistryManager(), itemCompound).orElse(ItemStack.EMPTY);
+                    if (!stack.isEmpty() && !stack.isOf(Items.AIR)) {
+                        this.guardInventory.setStack(handSlot, stack);
+                    }
+                }
             }
         }
         if (!getWorld().isClient) this.readAngerFromNbt(getWorld(), nbt);
@@ -571,7 +595,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
             LootContextParameterSet.Builder lootcontext$builder = (new LootContextParameterSet.Builder((ServerWorld) getWorld()).add(LootContextParameters.THIS_ENTITY, this));
             return loot.generateLoot(lootcontext$builder.build(GuardEntityLootTables.SLOT));
         }
-        return null;
+        return Collections.emptyList();
     }
 
     public int getGuardEntityVariant() {

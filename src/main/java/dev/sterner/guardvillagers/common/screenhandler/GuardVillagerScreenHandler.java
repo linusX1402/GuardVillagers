@@ -22,8 +22,8 @@ public class GuardVillagerScreenHandler extends ScreenHandler {
     public final Inventory guardInventory;
     private static final EquipmentSlot[] EQUIPMENT_SLOT_ORDER = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
 
-    public GuardVillagerScreenHandler(int syncId, PlayerInventory playerInventory, PacketByteBuf buf) {
-        this(syncId, playerInventory, playerInventory.player.getWorld().getEntityById(buf.readVarInt()) instanceof GuardEntity guard ? guard : null);
+    public GuardVillagerScreenHandler(int syncId, PlayerInventory playerInventory, Integer entityId) {
+        this(syncId, playerInventory, playerInventory.player.getWorld().getEntityById(entityId) instanceof GuardEntity guard ? guard : null);
     }
 
     public GuardVillagerScreenHandler(int syncId, PlayerInventory playerInventory, GuardEntity guardEntity) {
