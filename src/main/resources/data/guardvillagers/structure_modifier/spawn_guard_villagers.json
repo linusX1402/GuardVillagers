@@ -1,0 +1,20 @@
+{
+  "type": "fabric:add_structure_spawns",
+  "structures": [
+    "minecraft:village_plains",
+    "minecraft:village_desert",
+    "minecraft:village_savanna",
+    "minecraft:village_snowy",
+    "minecraft:village_taiga"
+  ],
+  "spawns": {
+    "creature": [
+      {
+        "type": "minecraft:llama",
+        "weight": 100,
+        "minCount": 5,
+        "maxCount": 8
+      }
+    ]
+  }
+}
