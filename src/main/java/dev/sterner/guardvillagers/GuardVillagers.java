@@ -6,13 +6,15 @@ import dev.sterner.guardvillagers.common.network.GuardPatrolPacket;
 import dev.sterner.guardvillagers.common.screenhandler.GuardVillagerScreenHandler;
 import eu.midnightdust.lib.config.MidnightConfig;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
+import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityType;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
@@ -22,17 +24,12 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.*;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
@@ -51,18 +48,17 @@ import java.util.function.Predicate;
 public class GuardVillagers implements ModInitializer {
     public static final String MODID = "guardvillagers";
     public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
-
     public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER =
-        new ExtendedScreenHandlerType<>(
-            GuardVillagerScreenHandler::new,
-            PacketCodecs.VAR_INT
-        );
-
+            new ExtendedScreenHandlerType<>(
+                    GuardVillagerScreenHandler::new,
+                    PacketCodecs.VAR_INT
+            );
 
     public static final EntityType<GuardEntity> GUARD_VILLAGER =
             Registry.register(Registries.ENTITY_TYPE, Identifier.of(GuardVillagers.MODID, "guard"),
-                    FabricEntityTypeBuilder.create(SpawnGroup.CREATURE, GuardEntity::new)
-                            .dimensions(EntityDimensions.fixed(0.6f, 1.8f)).build());
+                    FabricEntityType.Builder.createMob(GuardEntity::new, SpawnGroup.CREATURE, (builder) -> builder)
+                            .dimensions(0.6f, 1.8f).build());    public static final ScreenHandlerType<GuardVillagerScreenHandler> GUARD_SCREEN_HANDLER =
+            new ExtendedScreenHandlerType<>(GuardVillagerScreenHandler::new, PacketCodecs.VAR_INT);
 
     public static final Item GUARD_SPAWN_EGG = new SpawnEggItem(GUARD_VILLAGER, 5651507, 8412749, new Item.Settings());
     public static SoundEvent GUARD_AMBIENT = SoundEvent.of(Identifier.of(MODID, "entity.guard.ambient"));

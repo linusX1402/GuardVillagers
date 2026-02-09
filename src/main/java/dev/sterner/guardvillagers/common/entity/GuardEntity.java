@@ -10,8 +10,6 @@ import dev.sterner.guardvillagers.common.entity.goal.*;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.FoodComponent;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.RangedAttackMob;
 import net.minecraft.entity.ai.goal.*;
@@ -49,6 +47,7 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.StructureTags;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -60,6 +59,7 @@ import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.intprovider.UniformIntProvider;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.village.VillagerGossips;
@@ -102,6 +102,41 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     protected boolean spawnWithArmor;
     private int remainingPersistentAngerTime;
     private UUID persistentAngerTarget;
+
+    @Override
+    public boolean canSpawn(WorldAccess world, SpawnReason reason) {
+        GuardVillagers.LOGGER.info("Trying to spawn Guard with reason: {}", reason);
+
+        if (reason == SpawnReason.STRUCTURE) {
+            BlockPos pos = this.getBlockPos();
+
+            // Check if ground is solid
+            if (!world.getBlockState(pos.down()).isSolidBlock(world, pos.down())) {
+                return false;
+            }
+
+            if (world instanceof ServerWorld serverWorld) {
+                // Ensure we're in a village structure
+                if (!serverWorld.getStructureAccessor()
+                        .getStructureContaining(pos, StructureTags.VILLAGE)
+                        .hasChildren()) {
+                    return false;
+                }
+            }
+
+            // For structure spawning, allow more guards per village
+            List<GuardEntity> nearbyGuards = world.getEntitiesByClass(
+                    GuardEntity.class,
+                    new Box(pos).expand(64, 32, 64), // Larger search area for village
+                    guard -> true
+            );
+
+            return nearbyGuards.size() < 12; // Allow up to 12 guards in a village area
+        }
+
+        // For natural spawning, use stricter limits
+        return reason != SpawnReason.NATURAL || super.canSpawn(world, reason);
+    }
 
     public GuardEntity(EntityType<? extends GuardEntity> type, World world) {
         super(type, world);
@@ -599,15 +634,6 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
         this.spawnWithArmor = true;
     }
 
-//    public List<ItemStack> getStacksFromLootTable(EquipmentSlot slot, ServerWorld serverWorld) {
-//        if (EQUIPMENT_SLOT_ITEMS.containsKey(slot)) {
-//            LootTable loot = serverWorld.getServer().getReloadableRegistries().getLootTable(RegistryKey.of(RegistryKeys.LOOT_TABLE, EQUIPMENT_SLOT_ITEMS.get(slot)));
-//            LootContextParameterSet.Builder lootcontext$builder = (new LootContextParameterSet.Builder((ServerWorld) getWorld()).add(LootContextParameters.THIS_ENTITY, this));
-//            return loot.generateLoot(lootcontext$builder.build(GuardEntityLootTables.SLOT));
-//        }
-//        return Collections.emptyList();
-//    }
-
     public List<ItemStack> getStacksFromLootTable(EquipmentSlot slot, ServerWorld serverWorld) {
         if (EQUIPMENT_SLOT_ITEMS.containsKey(slot)) {
             RegistryKey<LootTable> lootTableKey = RegistryKey.of(RegistryKeys.LOOT_TABLE, EQUIPMENT_SLOT_ITEMS.get(slot));
@@ -683,7 +709,7 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
     public void shootAt(LivingEntity target, float pullProgress) {
         this.shieldCoolDown = 8;
         if (this.getMainHandStack().getItem() instanceof CrossbowItem)
-            this.shoot(this, 6.0F);
+            this.shoot(this, 1.6f);
         if (this.getMainHandStack().getItem() instanceof BowItem) {
             ItemStack itemStack = this.getProjectileType(this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW)));
             ItemStack hand = this.getActiveItem();

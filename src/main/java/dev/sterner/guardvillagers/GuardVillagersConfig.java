@@ -7,6 +7,9 @@ import java.util.List;
 
 public class GuardVillagersConfig extends MidnightConfig {
 
+
+    @Entry
+    public static int numberOfGuardsSpawned = 6;
     @Entry
     public static int reputationRequirementToBeAttacked = -100;
     @Entry
