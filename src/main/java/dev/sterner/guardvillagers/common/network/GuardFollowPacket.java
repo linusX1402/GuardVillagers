@@ -13,7 +13,7 @@ import net.minecraft.util.Identifier;
 
 public record GuardFollowPacket(int id) implements CustomPayload {
 
-    public static final CustomPayload.Id<GuardFollowPacket> ID = new CustomPayload.Id<>(new Identifier(GuardVillagers.MODID, "guard_follow"));
+    public static final CustomPayload.Id<GuardFollowPacket> ID = new CustomPayload.Id<>(Identifier.of(GuardVillagers.MODID, "guard_follow"));
     public static final PacketCodec<PacketByteBuf, GuardFollowPacket> CODEC = PacketCodec.of(GuardFollowPacket::write, GuardFollowPacket::read);
 
     public static void handle(GuardFollowPacket packet, ServerPlayNetworking.Context context) {

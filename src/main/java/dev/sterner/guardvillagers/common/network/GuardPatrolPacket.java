@@ -13,7 +13,7 @@ import net.minecraft.util.math.BlockPos;
 
 public record GuardPatrolPacket(int id, boolean pressed) implements CustomPayload {
 
-    public static final CustomPayload.Id<GuardPatrolPacket> ID = new CustomPayload.Id<>(new Identifier(GuardVillagers.MODID, "guard_patrol"));
+    public static final CustomPayload.Id<GuardPatrolPacket> ID = new CustomPayload.Id<>(Identifier.of(GuardVillagers.MODID, "guard_patrol"));
     public static final PacketCodec<PacketByteBuf, GuardPatrolPacket> CODEC = PacketCodec.of(GuardPatrolPacket::write, GuardPatrolPacket::read);
 
     public static void handle(GuardPatrolPacket packet, ServerPlayNetworking.Context context) {

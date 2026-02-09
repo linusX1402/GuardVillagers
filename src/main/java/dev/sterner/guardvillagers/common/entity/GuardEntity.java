@@ -7,7 +7,6 @@ import dev.sterner.guardvillagers.GuardVillagers;
 import dev.sterner.guardvillagers.GuardVillagersConfig;
 import dev.sterner.guardvillagers.common.screenhandler.GuardVillagerScreenHandler;
 import dev.sterner.guardvillagers.common.entity.goal.*;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.FoodComponent;
@@ -35,7 +34,6 @@ import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.entity.raid.RaiderEntity;
 import net.minecraft.inventory.Inventory;
@@ -49,13 +47,9 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -79,7 +73,7 @@ import java.util.function.Predicate;
 public class GuardEntity extends PathAwareEntity implements CrossbowUser, RangedAttackMob, Angerable, InventoryChangedListener, InteractionObserver {
     protected static final TrackedData<Optional<UUID>> OWNER_UNIQUE_ID = DataTracker.registerData(GuardEntity.class, TrackedDataHandlerRegistry.OPTIONAL_UUID);
     private static final UUID MODIFIER_UUID = UUID.fromString("5CD17E52-A79A-43D3-A529-90FDE04B181E");
-    private static final EntityAttributeModifier USE_ITEM_SPEED_PENALTY = new EntityAttributeModifier(MODIFIER_UUID, "Use item speed penalty", -0.25D, EntityAttributeModifier.Operation.ADD_VALUE);
+    private static final EntityAttributeModifier USE_ITEM_SPEED_PENALTY = new EntityAttributeModifier(Identifier.of(GuardVillagers.MODID, "use_item_speed_penalty"), -0.25D, EntityAttributeModifier.Operation.ADD_VALUE);
     private static final TrackedData<Optional<BlockPos>> GUARD_POS = DataTracker.registerData(GuardEntity.class, TrackedDataHandlerRegistry.OPTIONAL_BLOCK_POS);
     private static final TrackedData<Boolean> PATROLLING = DataTracker.registerData(GuardEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Integer> GUARD_VARIANT = DataTracker.registerData(GuardEntity.class, TrackedDataHandlerRegistry.INTEGER);
@@ -201,15 +195,20 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         return GuardVillagers.GUARD_DEATH;
     }
 
-    @Override
-    protected void dropEquipment(DamageSource source, int lootingMultiplier, boolean allowDrops) {
-        for (int i = 0; i < this.guardInventory.size(); ++i) {
-            ItemStack itemstack = this.guardInventory.getStack(i);
-            Random random = getWorld().getRandom();
-            if (!itemstack.isEmpty() && !EnchantmentHelper.hasVanishingCurse(itemstack) && random.nextFloat() < GuardVillagersConfig.chanceToDropEquipment)
-                this.dropStack(itemstack);
+
+
+@Override
+protected void dropEquipment(ServerWorld world, DamageSource source, boolean causedByPlayer) {
+    super.dropEquipment(world, source, causedByPlayer);
+
+    for (int i = 0; i < this.guardInventory.size(); ++i) {
+        ItemStack itemstack = this.guardInventory.getStack(i);
+        Random random = world.getRandom();
+        if (!itemstack.isEmpty() && !itemstack.contains(DataComponentTypes.ENCHANTMENTS) && random.nextFloat() < GuardVillagersConfig.chanceToDropEquipment) {
+            this.dropStack(itemstack);
         }
     }
+}
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
@@ -262,7 +261,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
                 if (!itemCompound.isEmpty() && itemCompound.contains("id", NbtElement.STRING_TYPE)) {
                     ItemStack stack = ItemStack.fromNbt(getRegistryManager(), itemCompound).orElse(ItemStack.EMPTY);
                     if (!stack.isEmpty() && !stack.isOf(Items.AIR)) {
-                        int index = GuardEntity.slotToInventoryIndex(MobEntity.getPreferredEquipmentSlot(stack));
+                        int index = GuardEntity.slotToInventoryIndex(this.getPreferredEquipmentSlot(stack));
                         this.guardInventory.setStack(index, stack);
                     }
                 }
@@ -446,16 +445,10 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     }
 
     @Override
-    public ItemStack eatFood(World world, ItemStack stack) {
-        if (stack.contains(DataComponentTypes.FOOD)) {
-            FoodComponent foodComponent = stack.get(DataComponentTypes.FOOD);
-            if (foodComponent != null) {
-                this.heal(foodComponent.nutrition());
-            }
-        }
+    public ItemStack eatFood(World world, ItemStack stack, FoodComponent foodComponent) {
+        this.heal(foodComponent.nutrition());
         world.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
-        super.eatFood(world, stack);
-        return stack;
+        return super.eatFood(world, stack, foodComponent);
     }
 
     @Override
@@ -531,7 +524,7 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         if (itemstack.getItem() == Items.SHIELD) { // See above
 
             EntityAttributeInstance modifiableattributeinstance = this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
-            modifiableattributeinstance.removeModifier(USE_ITEM_SPEED_PENALTY.uuid());
+            modifiableattributeinstance.removeModifier(USE_ITEM_SPEED_PENALTY);
             modifiableattributeinstance.addTemporaryModifier(USE_ITEM_SPEED_PENALTY);
         }
     }
@@ -539,20 +532,19 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     @Override
     public void stopUsingItem() {
         super.stopUsingItem();
-        if (this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).hasModifier(USE_ITEM_SPEED_PENALTY))
-            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).removeModifier(USE_ITEM_SPEED_PENALTY.uuid());
+        if (this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).hasModifier(USE_ITEM_SPEED_PENALTY.id()))
+            this.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).removeModifier(USE_ITEM_SPEED_PENALTY);
     }
 
     public void disableShield(boolean increase) {
-        float chance = 0.25F + (float) EnchantmentHelper.getEfficiency(this) * 0.05F;
-        if (increase) chance += 0.75;
+        float chance = 0.25F;
+        if (increase) chance += 0.75F;
         if (this.random.nextFloat() < chance) {
             this.shieldCoolDown = 100;
             this.stopUsingItem();
             getWorld().sendEntityStatus(this, (byte) 30);
         }
     }
-
 
 
     @Override
@@ -649,10 +641,9 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     }
 
     @Override
-    public boolean canBeLeashedBy(PlayerEntity player) {
+    public boolean canBeLeashed() {
         return false;
     }
-
 
     @Override
     public void shootAt(LivingEntity target, float pullProgress) {
@@ -662,17 +653,8 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         if (this.getMainHandStack().getItem() instanceof BowItem) {
             ItemStack itemStack = this.getProjectileType(this.getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW)));
             ItemStack hand = this.getActiveItem();
-            PersistentProjectileEntity persistentProjectileEntity = ProjectileUtil.createArrowProjectile(this, itemStack, pullProgress);
-            int powerLevel = EnchantmentHelper.getLevel(Enchantments.POWER, itemStack);
-            if (powerLevel > 0) {
-                persistentProjectileEntity.setDamage(persistentProjectileEntity.getDamage() + (double) powerLevel * 0.5D + 0.5D);
-            }
-            int punchLevel = EnchantmentHelper.getLevel(Enchantments.PUNCH, itemStack);
-            if (punchLevel > 0) {
-                persistentProjectileEntity.setPunch(punchLevel);
-            }
-            if (EnchantmentHelper.getLevel(Enchantments.FLAME, itemStack) > 0)
-                persistentProjectileEntity.setFireTicks(100);
+            PersistentProjectileEntity persistentProjectileEntity = ProjectileUtil.createArrowProjectile(this, itemStack, pullProgress, this.getMainHandStack());
+
             double d = target.getX() - this.getX();
             double e = target.getBodyY(0.3333333333333333D) - persistentProjectileEntity.getY();
             double f = target.getZ() - this.getZ();
@@ -828,21 +810,30 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
     }
 
 
-    @Override
-    public void damageArmor(DamageSource damageSource, float damage) {
-        if (damage >= 0.0F) {
-            damage = damage / 4.0F;
-            if (damage < 1.0F) {
-                damage = 1.0F;
-            }
-            for (int i = 0; i < this.guardInventory.size(); ++i) {
-                ItemStack itemstack = this.guardInventory.getStack(i);
-                if ((!damageSource.isOf(DamageTypes.ON_FIRE) || !itemstack.contains(DataComponentTypes.FIRE_RESISTANT)) && itemstack.getItem() instanceof ArmorItem) {
-                    itemstack.damage((int) damage, this, EquipmentSlot.fromTypeIndex(EquipmentSlot.Type.ARMOR, i));
+@Override
+public void damageArmor(DamageSource damageSource, float damage) {
+    if (damage >= 0.0F) {
+        damage = damage / 4.0F;
+        if (damage < 1.0F) {
+            damage = 1.0F;
+        }
+        for (int i = 0; i < this.guardInventory.size(); ++i) {
+            ItemStack itemstack = this.guardInventory.getStack(i);
+            if ((!damageSource.isOf(DamageTypes.ON_FIRE) || !itemstack.contains(DataComponentTypes.FIRE_RESISTANT)) && itemstack.getItem() instanceof ArmorItem) {
+                EquipmentSlot slot = switch (i) {
+                    case 0 -> EquipmentSlot.HEAD;
+                    case 1 -> EquipmentSlot.CHEST;
+                    case 2 -> EquipmentSlot.LEGS;
+                    case 3 -> EquipmentSlot.FEET;
+                    default -> null;
+                };
+                if (slot != null) {
+                    itemstack.damage((int) damage, this, slot);
                 }
             }
         }
     }
+}
 
     @Override
     public void onStruckByLightning(ServerWorld world, LightningEntity lightning) {

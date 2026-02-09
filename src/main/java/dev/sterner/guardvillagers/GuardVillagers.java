@@ -59,14 +59,14 @@ public class GuardVillagers implements ModInitializer {
 
 
     public static final EntityType<GuardEntity> GUARD_VILLAGER =
-            Registry.register(Registries.ENTITY_TYPE, new Identifier(GuardVillagers.MODID, "guard"),
+            Registry.register(Registries.ENTITY_TYPE, Identifier.of(GuardVillagers.MODID, "guard"),
                     FabricEntityTypeBuilder.create(SpawnGroup.CREATURE, GuardEntity::new)
                             .dimensions(EntityDimensions.fixed(0.6f, 1.8f)).build());
 
     public static final Item GUARD_SPAWN_EGG = new SpawnEggItem(GUARD_VILLAGER, 5651507, 8412749, new Item.Settings());
-    public static SoundEvent GUARD_AMBIENT = SoundEvent.of(new Identifier(MODID, "entity.guard.ambient"));
-    public static SoundEvent GUARD_HURT = SoundEvent.of(new Identifier(MODID, "entity.guard.hurt"));
-    public static SoundEvent GUARD_DEATH = SoundEvent.of(new Identifier(MODID, "entity.guard.death"));
+    public static SoundEvent GUARD_AMBIENT = SoundEvent.of(Identifier.of(MODID, "entity.guard.ambient"));
+    public static SoundEvent GUARD_HURT = SoundEvent.of(Identifier.of(MODID, "entity.guard.hurt"));
+    public static SoundEvent GUARD_DEATH = SoundEvent.of(Identifier.of(MODID, "entity.guard.death"));
 
     public static Hand getHandWith(LivingEntity livingEntity, Predicate<Item> itemPredicate) {
         return itemPredicate.test(livingEntity.getMainHandStack().getItem()) ? Hand.MAIN_HAND : Hand.OFF_HAND;
@@ -84,11 +84,11 @@ public class GuardVillagers implements ModInitializer {
         MidnightConfig.init(MODID, GuardVillagersConfig.class);
         FabricDefaultAttributeRegistry.register(GUARD_VILLAGER, GuardEntity.createAttributes());
 
-        Registry.register(Registries.ITEM, new Identifier(MODID, "guard_spawn_egg"), GUARD_SPAWN_EGG);
-        Registry.register(Registries.SCREEN_HANDLER, new Identifier("guard_screen"), GUARD_SCREEN_HANDLER);
-        Registry.register(Registries.SOUND_EVENT, new Identifier(MODID, "entity.guard.ambient"), GUARD_AMBIENT);
-        Registry.register(Registries.SOUND_EVENT, new Identifier(MODID, "entity.guard.hurt"), GUARD_HURT);
-        Registry.register(Registries.SOUND_EVENT, new Identifier(MODID, "entity.guard.death"), GUARD_DEATH);
+        Registry.register(Registries.ITEM, Identifier.of(MODID, "guard_spawn_egg"), GUARD_SPAWN_EGG);
+        Registry.register(Registries.SCREEN_HANDLER, Identifier.of("guard_screen"), GUARD_SCREEN_HANDLER);
+        Registry.register(Registries.SOUND_EVENT, Identifier.of(MODID, "entity.guard.ambient"), GUARD_AMBIENT);
+        Registry.register(Registries.SOUND_EVENT, Identifier.of(MODID, "entity.guard.hurt"), GUARD_HURT);
+        Registry.register(Registries.SOUND_EVENT, Identifier.of(MODID, "entity.guard.death"), GUARD_DEATH);
 
         PayloadTypeRegistry.playC2S().register(GuardFollowPacket.ID, GuardFollowPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(GuardPatrolPacket.ID, GuardPatrolPacket.CODEC);

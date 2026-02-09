@@ -22,13 +22,13 @@ import net.minecraft.util.math.MathHelper;
 
 public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandler> {
 
-    private static final Identifier GUARD_GUI_TEXTURES = new Identifier(GuardVillagers.MODID, "textures/gui/inventory.png");
-    private static final Identifier GUARD_FOLLOWING_ICON = new Identifier(GuardVillagers.MODID, "textures/gui/following_icons.png");
-    private static final Identifier GUARD_NOT_FOLLOWING_ICON = new Identifier(GuardVillagers.MODID, "textures/gui/not_following_icons.png");
-    private static final Identifier PATROL_ICON = new Identifier(GuardVillagers.MODID, "textures/gui/patrollingui.png");
-    private static final Identifier NOT_PATROLLING_ICON = new Identifier(GuardVillagers.MODID, "textures/gui/notpatrollingui.png");
+    private static final Identifier GUARD_GUI_TEXTURES = Identifier.of(GuardVillagers.MODID, "textures/gui/inventory.png");
+    private static final Identifier GUARD_FOLLOWING_ICON = Identifier.of(GuardVillagers.MODID, "textures/gui/following_icons.png");
+    private static final Identifier GUARD_NOT_FOLLOWING_ICON = Identifier.of(GuardVillagers.MODID, "textures/gui/not_following_icons.png");
+    private static final Identifier PATROL_ICON = Identifier.of(GuardVillagers.MODID, "textures/gui/patrollingui.png");
+    private static final Identifier NOT_PATROLLING_ICON = Identifier.of(GuardVillagers.MODID, "textures/gui/notpatrollingui.png");
 
-    private static final Identifier ICONS = new Identifier("textures/gui/icons.png");
+    private static final Identifier ICONS = Identifier.of("textures/gui/icons.png");
     private final PlayerEntity player;
     private final GuardEntity guardEntity;
     private float mousePosX;
@@ -94,12 +94,12 @@ public class GuardVillagerScreen extends HandledScreen<GuardVillagerScreenHandle
         int armor = guardEntity.getArmor();
         int statusU = guardEntity.hasStatusEffect(StatusEffects.POISON) ? 4 : 0;
 
-        Identifier heartContainer = new Identifier("hud/heart/container");
-        Identifier heartFull = new Identifier("hud/heart/full");
-        Identifier heartHalf = new Identifier("hud/heart/half");
-        Identifier armorEmpty = new Identifier("hud/armor_empty");
-        Identifier armorFull = new Identifier("hud/armor_full");
-        Identifier armorHalf = new Identifier("hud/armor_half");
+        Identifier heartContainer = Identifier.of("hud/heart/container");
+        Identifier heartFull = Identifier.of("hud/heart/full");
+        Identifier heartHalf = Identifier.of("hud/heart/half");
+        Identifier armorEmpty = Identifier.of("hud/armor_empty");
+        Identifier armorFull = Identifier.of("hud/armor_full");
+        Identifier armorHalf = Identifier.of("hud/armor_half");
 
         // Render hearts
         for (int i = 0; i < 10; i++) {

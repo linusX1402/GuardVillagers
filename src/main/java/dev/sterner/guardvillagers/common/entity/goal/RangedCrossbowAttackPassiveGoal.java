@@ -8,6 +8,7 @@ import net.minecraft.entity.*;
 import net.minecraft.entity.ai.NoPenaltyTargeting;
 import net.minecraft.entity.ai.RangedAttackMob;
 import net.minecraft.entity.ai.goal.Goal;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -140,7 +141,7 @@ public class RangedCrossbowAttackPassiveGoal<T extends PathAwareEntity & RangedA
                 }
                 int i = this.mob.getItemUseTime();
                 ItemStack itemstack = this.mob.getActiveItem();
-                if (i >= CrossbowItem.getPullTime(itemstack) || CrossbowItem.isCharged(itemstack)) {
+                if (i >= CrossbowItem.getPullTime(itemstack, mob) || CrossbowItem.isCharged(itemstack)) {
                     this.mob.stopUsingItem();
                     this.crossbowState = CrossbowState.CHARGED;
                     this.attackDelay = 10 + this.mob.getRandom().nextInt(5);
