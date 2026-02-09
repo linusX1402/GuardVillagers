@@ -154,6 +154,21 @@ public class GuardEntity extends PathAwareEntity implements CrossbowUser, Ranged
         this.setGuardEntityVariant(type);
         Random random = world.getRandom();
         this.initEquipment(random, difficulty);
+
+        //        TODO
+        // Apply loot table equipment immediately on server side
+        GuardVillagers.LOGGER.info(GuardEntityLootTables.GUARD_MAIN_HAND.toString());
+        if (world instanceof ServerWorld serverWorld) {
+            for (EquipmentSlot slot : EquipmentSlot.values()) {
+                for (ItemStack stack : this.getStacksFromLootTable(slot, serverWorld)) {
+                    if (!stack.isEmpty()) {
+                        this.equipStack(slot, stack);
+                    }
+                }
+            }
+            this.spawnWithArmor = false; // Clear the flag since we've equipped everything
+        }
+
         return super.initialize(world, difficulty, spawnReason, dataTracker);
     }
 
@@ -416,6 +431,8 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
         return super.tryAttack(target);
     }
 
+
+
     @Override
     public void handleStatus(byte status) {
         if (status == 4) {
@@ -462,14 +479,15 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
         if (this.getHealth() < this.getMaxHealth() && this.age % 200 == 0) {
             this.heal(GuardVillagersConfig.amountOfHealthRegenerated);
         }
-        if (spawnWithArmor && this.getWorld() instanceof ServerWorld serverWorld) {
-            for (EquipmentSlot equipmentslottype : EquipmentSlot.values()) {
-                for (ItemStack stack : this.getStacksFromLootTable(equipmentslottype, serverWorld)) {
-                    this.equipStack(equipmentslottype, stack);
-                }
-            }
-            this.spawnWithArmor = false;
-        }
+//        TODO
+//        if (spawnWithArmor && this.getWorld() instanceof ServerWorld serverWorld) {
+//            for (EquipmentSlot equipmentslottype : EquipmentSlot.values()) {
+//                for (ItemStack stack : this.getStacksFromLootTable(equipmentslottype, serverWorld)) {
+//                    this.equipStack(equipmentslottype, stack);
+//                }
+//            }
+//            this.spawnWithArmor = false;
+//        }
         if (!getWorld().isClient) this.tickAngerLogic((ServerWorld) getWorld(), true);
         this.tickHandSwing();
         super.tickMovement();
@@ -480,8 +498,6 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
         this.maybeDecayGossip();
         super.tick();
     }
-
-
 
     @Override
     public EntityDimensions getBaseDimensions(EntityPose poseIn) {
@@ -583,10 +599,28 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
         this.spawnWithArmor = true;
     }
 
+//    public List<ItemStack> getStacksFromLootTable(EquipmentSlot slot, ServerWorld serverWorld) {
+//        if (EQUIPMENT_SLOT_ITEMS.containsKey(slot)) {
+//            LootTable loot = serverWorld.getServer().getReloadableRegistries().getLootTable(RegistryKey.of(RegistryKeys.LOOT_TABLE, EQUIPMENT_SLOT_ITEMS.get(slot)));
+//            LootContextParameterSet.Builder lootcontext$builder = (new LootContextParameterSet.Builder((ServerWorld) getWorld()).add(LootContextParameters.THIS_ENTITY, this));
+//            return loot.generateLoot(lootcontext$builder.build(GuardEntityLootTables.SLOT));
+//        }
+//        return Collections.emptyList();
+//    }
+
     public List<ItemStack> getStacksFromLootTable(EquipmentSlot slot, ServerWorld serverWorld) {
         if (EQUIPMENT_SLOT_ITEMS.containsKey(slot)) {
-            LootTable loot = serverWorld.getServer().getReloadableRegistries().getLootTable(RegistryKey.of(RegistryKeys.LOOT_TABLE, EQUIPMENT_SLOT_ITEMS.get(slot)));
-            LootContextParameterSet.Builder lootcontext$builder = (new LootContextParameterSet.Builder((ServerWorld) getWorld()).add(LootContextParameters.THIS_ENTITY, this));
+            RegistryKey<LootTable> lootTableKey = RegistryKey.of(RegistryKeys.LOOT_TABLE, EQUIPMENT_SLOT_ITEMS.get(slot));
+
+            LootTable loot = serverWorld.getServer().getReloadableRegistries().getLootTable(lootTableKey);
+
+            if (loot == LootTable.EMPTY) {
+                GuardVillagers.LOGGER.warn("Loot table not found: {}", lootTableKey.getValue());
+                return Collections.emptyList();
+            }
+
+            LootContextParameterSet.Builder lootcontext$builder = new LootContextParameterSet.Builder(serverWorld)
+                .add(LootContextParameters.THIS_ENTITY, this);
             return loot.generateLoot(lootcontext$builder.build(GuardEntityLootTables.SLOT));
         }
         return Collections.emptyList();
@@ -735,14 +769,6 @@ protected void dropEquipment(ServerWorld world, DamageSource source, boolean cau
             this.bodyYaw = creatureentity.bodyYaw;
         }
     }
-
-
-//    TODO: unknown override
-//    @Override
-//    public double getHeightOffset() {
-//        return -0.35D;
-//    }
-
 
     @Override
     public void postShoot() {
@@ -1037,7 +1063,6 @@ public void damageArmor(DamageSource damageSource, float damage) {
                 super.tick();
             }
         }
-
 
         @Override
         public void attack(LivingEntity target) {
